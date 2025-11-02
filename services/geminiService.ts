@@ -31,6 +31,57 @@ Now, provide the rewritten, perfected prompt. Your entire response MUST BE ONLY 
 }
 
 
+function buildAnalysisPrompt(initialPrompt: string, desiredOutcome: string): string {
+    return `You are an expert AI prompt engineering diagnostician. Your goal is to analyze a user's prompt and provide constructive, actionable feedback to help them improve it for any generative AI model. Do not rewrite the prompt for them; instead, teach them how to improve it.
+
+Analyze the user's initial prompt and their desired outcome. Identify potential issues such as vagueness, ambiguity, lack of context, missing constraints, or unclear formatting. Provide a concise list of 3-5 specific suggestions for improvement. Frame your suggestions as helpful tips.
+
+Here is the user's input:
+---
+INITIAL PROMPT:
+"${initialPrompt}"
+---
+DESIRED OUTCOME:
+"${desiredOutcome || 'No specific outcome provided. Infer the best possible outcome from the initial prompt.'}"
+---
+
+Your analysis and suggestions:
+Format your response as a markdown bulleted list. Each bullet point should be a clear, actionable suggestion. Your entire response must ONLY be the markdown list. For example:
+* Suggestion 1...
+* Suggestion 2...`;
+}
+
+export const analyzePrompt = async (initialPrompt: string, desiredOutcome: string): Promise<string> => {
+    try {
+        if (!initialPrompt) {
+            return "Please provide an initial prompt to analyze.";
+        }
+        
+        const metaPrompt = buildAnalysisPrompt(initialPrompt, desiredOutcome);
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro',
+            contents: metaPrompt,
+            config: {
+                temperature: 0.5,
+            }
+        });
+
+        const text = response.text;
+
+        if (!text) {
+            throw new Error('Received an empty analysis from the AI.');
+        }
+
+        return text.trim();
+
+    } catch (error) {
+        console.error('Error calling Gemini API for analysis:', error);
+        throw new Error('Failed to communicate with the AI service for analysis.');
+    }
+}
+
+
 export const generatePerfectPrompt = async (initialPrompt: string, desiredOutcome: string): Promise<string> => {
     try {
         const metaPrompt = buildMetaPrompt(initialPrompt, desiredOutcome);
